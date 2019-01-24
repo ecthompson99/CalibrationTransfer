@@ -1,0 +1,3 @@
+# Calibration Transfer
+
+Calibration transfer uses statistical methods to map a child instrument's response values onto the response values of a parent instrument. This application will use a combination of Savitzky-Golay polynomial interpolation for noise reduction, linear shift to reverse linear shift in the instrument's CCD pixel array, and bandwidth processing which increases the acuity of absorbance peaks (tunes the height factor of the peaks).
