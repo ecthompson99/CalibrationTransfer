@@ -16,14 +16,12 @@ file_path = filedialog.askopenfilenames(filetype = (["Excel File","*.xlsx"]))
 first = load_workbook(str(file_path[0]))
 second = load_workbook(str(file_path[1]))
 
-# Making a separate file
-# os.chdir(filedialog.askdirectory())
-# cwd = os.getcwd()
-# first.save('combined data.xlsx')
-
-# third = load_workbook(cwd+'\\combined data.xlsx')
-
 sheet = first.get_sheet_by_name('ABS')
 
-first.save('Updated.xlsx')
+spegg1 = list(range(sheet.max_columns)
 
+for i in range(1,sheet.max_rows+1):
+    for j in range(1, sheet.max_columns+1):
+    spegg1[i].append(sheet(i, j).value)
+
+print(spegg1)
