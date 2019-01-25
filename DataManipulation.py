@@ -72,7 +72,7 @@ def shift(lo = -5, hi = 5, numvals = 100, region = [500, 600]):
 sf = shift()
 
 def bandwidth():
-    nx = x + sf
+    nx = x + sf;
     p = []
     testx = np.linspace(500, 600, 101)
     testx2 = np.linspace(498, 601, 104)
@@ -91,9 +91,13 @@ def bandwidth():
     minum = min([abs(num) for num in p])
     pp = [abs(num) for num in p]
     bw = blah[pp.index(minum)]
-    return bw
+    
+    x_return = nx[1:-2]
+    hi = [t(i) for i in nx]
+    y_return = [(-hi[i-1]*bw + (1+2*bw)*hi[i] - hi[i+1]*bw) for i in range(2, len(nx)-1)]
+    return x_return, y_return
 
-# plt.figure(figsize=[30,30])
-# plt.xlim([500,600])
-# plt.ylim([1, 1.4])
-# plt.plot(x, interp2, '--', x, interp1, '-*', x+sf, interp1, '-')
+xx, yy = bandwidth()
+
+plt.figure(figsize=[30,30])
+plt.plot(x, interp2, 'r--', xx, yy, 'g--', x, interp1, 'b--')
