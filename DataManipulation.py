@@ -20,7 +20,6 @@ sheet1 = first['ABS']
 sheet2 = second['ABS']
 
 ### scraping data
-
 # Fills up a list with an entire row
 def fill_list(sheet, r, start = 1, length=sheet1.max_column):
     """ Fills up a list with an entire row from the excel sheet.
@@ -71,6 +70,29 @@ def shift(lo = -5, hi = 5, numvals = 100, region = [500, 600]):
     return sf
 
 sf = shift()
+
+def bandwidth():
+    nx = x + sf
+    p = []
+    testx = np.linspace(500, 600, 101)
+    testx2 = np.linspace(498, 601, 104)
+    testy = [f2(i) for i in testx]
+    blah = np.linspace(-2,2,100)
+    for k in blah:
+        l = [] 
+        t = interp1d(nx, interp1)
+        y = [t(i) for i in testx2]
+
+        for i in range(2, len(testx2)-1): 
+            l.append(-y[i-1]*k + (1+2*k)*y[i] - y[i+1]*k)
+
+        p.append(sum(sq(l)-sq(testy)))
+
+    minum = min([abs(num) for num in p])
+    pp = [abs(num) for num in p]
+    bw = blah[pp.index(minum)]
+    return bw
+
 # plt.figure(figsize=[30,30])
 # plt.xlim([500,600])
 # plt.ylim([1, 1.4])
