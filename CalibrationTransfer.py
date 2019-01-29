@@ -54,3 +54,73 @@ y2 = spl(first_x2, first_row2) # function
 # interpolated y-values
 yy1 = y1(x)
 yy2 = y2(x)
+
+################# MATHEMATICAL FUNCTIONS #######################
+
+
+## SHIFTING FUNCTION ##
+def shift():
+    l = [] # array of the sum of squares
+    
+    shift_factor = np.linspace(-5, 5, 12)
+    
+    # Let's choose y1 as our master instrument
+    # we need to shift y2 so that it has the smallest sum of squares with y1
+    for i in shift_factor:
+        nx = x + i
+        ny2 = spl(nx, yy2) # same shape
+        nyy2 = ny2(x) # new y-values
+        l.append(sum(abs(sq(yy1)-sq(nyy2))))
+    minum = [abs(num) for num in l]
+    minindex = minum.index(min(minum))
+    sf = list(shift_factor)[minindex]
+    nx = x + sf
+    ny2 = spl(nx, yy2)
+    nyy2 = ny2(x)
+    return yy1, nyy2, sf
+
+y1, y2, sf = shift()
+
+
+## TESTING THE SHIFTING FUNCTION BY PLOTTING ##
+
+# plt.figure(figsize=[20,20])
+# plt.subplot(2,1,1)
+# plt.plot(x, y1, x, y2)
+
+# plt.subplot(2,1,2)
+# plt.xlim(500, 650)
+# plt.ylim(0,1.2)
+# plt.plot(first_x, first_row, first_x2, first_row2)
+
+## BANDWIDTH FUNCTION ##
+
+peaks = peak(y2)
+
+def bandwidth(peak_index, region): 
+    lo = peak_index-region
+    hi = peak_index+region
+    x2 = np.linspace(x[lo], x[hi], 2*region)
+    bandwidth = np.linspace(-6,6,101)
+    p = []
+    for k in bandwidth:
+        l = []
+        ny1 = []
+
+        for i in range(lo, hi): 
+            l.append(-y2[i-1]*k + (1+2*k)*y2[i] - y2[i+1]*k)
+            ny1.append(y1[i])
+        p.append(sum(abs(sq(l)-sq(ny1))))
+        
+    minum = [abs(num) for num in p]
+    bw = list(bandwidth)[minum.index(min(minum))]
+    ny2 = []
+    for i in range(1, len(y2)-1): 
+        ny2.append(-y2[i-1]*bw + (1+2*bw)*y2[i] - y2[i+1]*bw)
+    return ny2, bw   
+
+## PLOTTING THE RESULTING GRAPH ## 
+# y3, bw = bandwidth(peaks[1], 15)
+# plt.figure(figsize=[20,20])
+# x3 = np.linspace(501,649, 249)
+# plt.plot(x3, y3, 'g-', x, y1, 'b--')
