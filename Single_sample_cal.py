@@ -84,29 +84,28 @@ y1, y2, sf = shift()
 
 ## TESTING THE SHIFTING FUNCTION BY PLOTTING ##
 
-# plt.figure(figsize=[20,20])
-# plt.subplot(2,1,1)
-# plt.plot(x, y1, x, y2)
+plt.figure(figsize=[20,20])
+plt.subplot(2,1,1)
+plt.plot(x, y1, x, y2)
 
-# plt.subplot(2,1,2)
-# plt.xlim(500, 650)
-# plt.ylim(0,1.2)
-# plt.plot(first_x, first_row, first_x2, first_row2)
+plt.subplot(2,1,2)
+plt.xlim(500, 650)
+plt.ylim(0,1.2)
+plt.plot(first_x, first_row, first_x2, first_row2)
 
 ## BANDWIDTH FUNCTION ##
 
 peaks = peak(y2)
 
 def bandwidth(peak_index, region): 
-    lo = peak_index-region
-    hi = peak_index+region
-    x2 = np.linspace(x[lo], x[hi], 2*region)
-    bandwidth = np.linspace(-6,6,101)
+    lo = peak_index[0]-region
+    hi = peak_index[-1]+region
+    bandwidth = np.linspace(-10,10,201)
     p = []
     for k in bandwidth:
         l = []
         ny1 = []
-
+        
         for i in range(lo, hi): 
             l.append(-y2[i-1]*k + (1+2*k)*y2[i] - y2[i+1]*k)
             ny1.append(y1[i])
@@ -117,10 +116,10 @@ def bandwidth(peak_index, region):
     ny2 = []
     for i in range(1, len(y2)-1): 
         ny2.append(-y2[i-1]*bw + (1+2*bw)*y2[i] - y2[i+1]*bw)
-    return ny2, bw   
+    return ny2, bw  
 
-## PLOTTING THE RESULTING GRAPH ## 
-# y3, bw = bandwidth(peaks[1], 15)
-# plt.figure(figsize=[20,20])
-# x3 = np.linspace(501,649, 249)
-# plt.plot(x3, y3, 'g-', x, y1, 'b--')
+## TESTING THE BANDWIDTH FUNCTION BY PLOTTING ## 
+y3, bw = bandwidth(peaks[1], 15)
+plt.figure(figsize=[20,20])
+x3 = np.linspace(501,649, 249)
+plt.plot(x3, y3, 'g-', x, y1, 'b--')
