@@ -50,7 +50,7 @@ y2 = []
 yy1 = []
 yy2 = []
 
-x = [first_x[i] for i in range(51, 95)]
+x = [first_x[i] for i in range(50, 85)]
 
 for i in rcal_i:
     first_row.append(fill_list(sheet1, i, 7))
@@ -131,4 +131,40 @@ def bandwidth(peak_index, region, nyy2):
         
     return bwy2, bw
 
-bwy2, bw = bandwidth(peaks, 15, nyy2)
+bwy2, bw = bandwidth(peaks, 10, nyy2)
+
+%matplotlib qt
+# plt.plot(x, yy1[1], x, nyy2[1], 'g-', x, yy2[1], 'k-')
+# plt.plot(x, yy1[2], x, nyy2[2], 'r-', x, yy2[2], 'k-')
+# plt.plot(x, yy1[0], x, nyy2[0], 'y-', x, yy2[0], 'k-')
+# plt.plot(x3, bwy2[0], 'g-', x, yy1[0], 'b-', x, yy2[0], 'k-')
+# plt.plot(x3, bwy2[1], 'g-', x, yy1[1], 'b-', x, yy2[1], 'k-')
+# plt.plot(x3, bwy2[2], 'g-', x, yy1[2], 'b-', x, yy2[2], 'k-')
+# plt.show()
+
+def calibrate(sf, bw): 
+    input_row = int(input('What sample do you want to calibrate?'))
+    row = fill_list(sheet2, input_row, 7)
+    fn = spl(first_x2, row)
+    nx = [num + sf for num in x]
+    y = fn(nx)
+    
+    ny = []
+    for i in range(1, len(x)-1):
+        ny.append(-y[i-1]*bw + (1+2*bw)*y[i] - y[i+1]*bw)
+    
+    row1 = fill_list(sheet1, input_row, 7)
+    fn1 = spl(first_x, row1)
+    y1 = fn1(x) 
+    
+    x2 = [first_x2[i] for i in range(50,85)]
+    y2 = fn(x2)
+    %matplotlib qt
+    
+    plt.plot(x3, ny, 'g-', x, y1, 'b-', x2, y2, 'r--')
+    plt.show()
+    
+    return ny
+
+calibrate(sf, bw)
+sf, bw
