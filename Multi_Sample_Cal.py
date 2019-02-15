@@ -168,25 +168,31 @@ def calibrate(sf, bw):
     mean1 = [np.mean(oy1[i]) for i in range(len(oy1))]
     mean2 = [np.mean(oy2[i]) for i in range(len(oy2))]
 
-    for i in range(len(mean0)):
-        y = y + [oy[i][j]-mean0[i] for j in range(len(oy[i]))]
-        y1 = y1 + [oy1[i][j]-mean1[i] for j in range(len(oy1[i]))]
-        y2 = y2 + [oy[i][j]-mean2[i] for j in range(len(oy2[i]))]
+    # lists of the y's used in the plots
+    y = []
+    y1 = []
+    y2 = []
     
+    for i in range(len(mean0)):
+        y.append([oy[i][j]-mean0[i] for j in range(len(oy[i]))])
+        y1.append([oy1[i][j]-mean1[i] for j in range(len(oy1[i]))])
+        y2.append([oy[i][j]-mean2[i] for j in range(len(oy2[i]))])
+    
+    # applying bandwidth only to the new y2 data
     ny = []
 
     for j in range(len(y)):
-        for i in range(1, len(x)-1):
-            ny.append(-y[j][i-1]*bw + (1+2*bw)*y[j][i] - y[j][i+1]*bw)
+        ny.append([-y[j][i-1]*bw + (1+2*bw)*y[j][i] - y[j][i+1]*bw for i in range(1, len(x)-1)])
     
+    # plotting data
     plt.figure().text(0.5, .05, "The difference of squares error is: " + str(err), ha='center', va='bottom')
-    for i in range(0,1):
+    for i in range(0,3):
         plt.plot(x3, ny[i], 'g-', label="new")
         plt.plot(x, y1[i], 'b-', label="master")
         plt.plot(x2, y2[i], 'r--', label="old")
         plt.legend(loc="best")
         plt.show()
-    
+        
     return ny
 
 calibrate(sf, bw)
