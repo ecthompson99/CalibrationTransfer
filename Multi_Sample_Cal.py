@@ -1,18 +1,15 @@
 #Importing modules
 
-from tkinter import *
+import tkinter as tk
 from tkinter import filedialog
 from openpyxl import load_workbook
 from matplotlib import pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from matplotlib.figure import Figure
 from scipy.interpolate import interp1d, InterpolatedUnivariateSpline as spl
 import numpy as np
 from numpy import square as sq
 from peakutils import indexes as peak
 
-
-root = Tk()
+root = tk.Tk()
 file_path = filedialog.askopenfilenames(filetype = [("Excel File","*.xlsx")])
 
 first = load_workbook(str(file_path[0]))
@@ -28,29 +25,21 @@ def fill_list(sheet, r, start = 1, length=sheet1.max_column):
         vals.append(sheet.cell(r, i).value)
     return vals
 
-# Saving a 1D array of the x-values of each instrument
-
-def find_rcal():
-    indexes = []
-    for i in range(1, sheet1.max_column):
-        if 'RCAL' in str(sheet1.cell(i, 1).value):
-            indexes.append(i)
-    return indexes
-
-rcal_i = find_rcal()
+# picking the interval of rows of calibration samples
+rcal_i = [i for i in range(28,34)] # for shift
 
 first_x = fill_list(sheet1, 1, 7) 
 first_x2 = fill_list(sheet2, 1, 7) 
 
-first_row = [] # stores 3 sets of y-values for the calibration samples of the main instrument
-first_row2 = [] # stores 3 sets of y-values for the calibration samples of the secondary instrument
+first_row = [] # stores the sets of y-values for the calibration samples of the main instrument
+first_row2 = [] # stores the sets of y-values for the calibration samples of the secondary instrument
 
 y1 = []
 y2 = []
 yy1 = []
 yy2 = []
 
-x = [first_x[i] for i in range(50, 85)]
+x = [first_x[i] for i in range(40, 100)] # Here, the range of y-values are chosen
 
 for i in rcal_i:
     first_row.append(fill_list(sheet1, i, 7))
@@ -62,6 +51,20 @@ for i in range(len(rcal_i)):
     yy1.append(y1[i](x))
     yy2.append(y2[i](x))
 
+# -------------------- FUNCTIONS -----------------------------------
+
+# Mean subtraction
+
+mean_yy1 = [np.mean(yy1[i]) for i in range(len(yy1))]
+mean_yy2 = [np.mean(yy2[i]) for i in range(len(yy2))]
+   
+sm_yy1 = []
+sm_yy2 = []
+for i in range(len(yy1)): 
+    sm_yy1.append([yy1[i][j] - mean_yy1[i] for j in range(len(yy1[i]))])
+    sm_yy2.append([yy2[i][j] - mean_yy2[i] for j in range(len(yy1[i]))])
+
+# shifting function
 
 def shift(yy1, yy2):
     l = [] # array of the sum of squares
@@ -76,7 +79,7 @@ def shift(yy1, yy2):
             ny2 = spl(nx, yy2[j]) # same shape
             nyy2[j] = ny2(x) # new y-values
             
-            squaresum.append(sum(abs(sq(yy1[j])-sq(nyy2[j]))))
+            squaresum.append(sum(abs(yy1[j]-nyy2[j])))
           
         l.append(sum(squaresum))
 
@@ -90,14 +93,15 @@ def shift(yy1, yy2):
    
     return nyy2, sf
 
-nyy2, sf = shift(yy1, yy2)
+nyy2, sf = shift(sm_yy1, sm_yy2)
 
+
+# Bandwidth Function
 peaks = [peak(nyy2[i]) for i in range(len(nyy2))]
 
 x3 = [x[i] for i in range(1,len(x)-1)]
 
-def bandwidth(peak_index, region, nyy2):
-    
+def bandwidth(peak_index, region, nyy2, yy1):
     bandwidth = np.linspace(-5,5,1001)
     p = []
     
@@ -118,7 +122,8 @@ def bandwidth(peak_index, region, nyy2):
             l2.append(l)
             ny2.append(ny1)            
         
-        sumsquare = [sum(abs(sq(l2[i])-sq(ny2[i]))) for i in range(len(peak_index))]
+        sub_arrays = [[abs(a - b) for (a, b) in zip(l2[i], ny2[i])] for i in range(len(peak_index))]
+        sumsquare = [sum(num) for num in sub_arrays]
         p.append(sum(sumsquare))
 
     bw = list(bandwidth)[p.index(min(p))]
@@ -129,40 +134,72 @@ def bandwidth(peak_index, region, nyy2):
             temp.append(-nyy2[i][j-1]*bw + (1+2*bw)*nyy2[i][j] - nyy2[i][j+1]*bw)
         bwy2.append(temp)
         
-    return bwy2, bw
+    return bwy2, bw, min(p)
 
-bwy2, bw = bandwidth(peaks, 10, nyy2)
+bwy2, bw, err = bandwidth(peaks, 5, nyy2, sm_yy1)
 
-# plt.plot(x, yy1[1], x, nyy2[1], 'g-', x, yy2[1], 'k-')
-# plt.plot(x, yy1[2], x, nyy2[2], 'r-', x, yy2[2], 'k-')
-# plt.plot(x, yy1[0], x, nyy2[0], 'y-', x, yy2[0], 'k-')
-# plt.plot(x3, bwy2[0], 'g-', x, yy1[0], 'b-', x, yy2[0], 'k-')
-# plt.plot(x3, bwy2[1], 'g-', x, yy1[1], 'b-', x, yy2[1], 'k-')
-# plt.plot(x3, bwy2[2], 'g-', x, yy1[2], 'b-', x, yy2[2], 'k-')
-# plt.show()
-
+# # calculating the error involved
+# yyy1 = []
+# sumsquare = []
+# for i in range(len(bwy2)):
+#     yyy1.append(y1[i](x3))
+#     sumsquare.append(sum(abs(bwy2[i]-yyy1[i])))
+    
 def calibrate(sf, bw): 
-    input_row = int(input('What sample do you want to calibrate?'))
+    input_row = int(input('What is the row of the sample do you want to calibrate?: '))
     row = fill_list(sheet2, input_row, 7)
     fn = spl(first_x2, row)
     nx = [num + sf for num in x]
-    y = fn(nx)
+    oy = fn(nx)
+    
+    row1 = fill_list(sheet1, input_row, 7)
+    fn1 = spl(first_x, row1)
+    oy1 = fn1(x) 
+    
+    x2 = [first_x2[i] for i in range(40,100)]
+    oy2 = fn(x2)
+    
+    # calculating the mean-centered plots
+    
+    mean0 = np.mean(oy)
+    mean1 = np.mean(oy1)
+    mean2 = np.mean(oy2)
+    y = [num-mean0 for num in oy]
+    y1 = [num-mean1 for num in oy1]
+    y2 = [num-mean2 for num in oy2]
     
     ny = []
     for i in range(1, len(x)-1):
         ny.append(-y[i-1]*bw + (1+2*bw)*y[i] - y[i+1]*bw)
     
-    row1 = fill_list(sheet1, input_row, 7)
-    fn1 = spl(first_x, row1)
-    y1 = fn1(x) 
-    
-    x2 = [first_x2[i] for i in range(50,85)]
-    y2 = fn(x2)
-    
-    plt.plot(x3, ny, 'g-', x, y1, 'b-', x2, y2, 'r--')
+    plt.figure().text(0.5, .05, "The difference of squares error is: " + str(err), ha='center', va='bottom')
+    plt.plot(x3, ny, 'g-', label="new")
+    plt.plot(x, y1, 'b-', label="master")
+    plt.plot(x2, y2, 'r--', label="old")
+    plt.legend(loc="best")
     plt.show()
     
     return ny
 
 calibrate(sf, bw)
-sf, bw
+
+sf, bw, err
+    
+# ------------------------- PLOTS --------------------------------------
+
+# %matplotlib qt
+
+# fig = plt.figure()
+# fig.text(0.5, .05, "The difference of squares error is: " + str(sum(sumsquare)), ha='center', va='bottom')
+# # plt.plot(x, yy1[1], x, nyy2[1], 'g-', x, yy2[1], 'k-')
+# # plt.plot(x, yy1[2], x, nyy2[2], 'r-', x, yy2[2], 'k-')
+# # plt.plot(x, yy1[0], x, nyy2[0], 'y-', x, yy2[0], 'k-')
+# plt.ylim(-0.75,1.25)
+# plt.plot(x3, bwy2[0], 'g-', x, sm_yy1[0], 'b-', x, sm_yy2[0], 'r-')
+# plt.plot(x3, bwy2[1], 'g-', x, sm_yy1[1], 'b-', x, sm_yy2[1], 'r-')
+# plt.plot(x3, bwy2[2], 'g-', x, sm_yy1[2], 'b-', x, sm_yy2[2], 'r-')
+# plt.plot(x3, bwy2[3], 'g-', x, sm_yy1[3], 'b-', x, sm_yy2[3], 'r-')
+# plt.plot(x3, bwy2[4], 'g-', x, sm_yy1[4], 'b-', x, sm_yy2[4], 'r-')
+# plt.plot(x3, bwy2[5], 'g-', x, sm_yy1[5], 'b-', x, sm_yy2[5], 'r-')
+# plt.title('Without derivative function')
+# plt.show()
