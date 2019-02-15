@@ -146,38 +146,46 @@ bwy2, bw, err = bandwidth(peaks, 5, nyy2, sm_yy1)
 #     sumsquare.append(sum(abs(bwy2[i]-yyy1[i])))
     
 def calibrate(sf, bw): 
-    input_row = int(input('What is the row of the sample do you want to calibrate?: '))
-    row = fill_list(sheet2, input_row, 7)
-    fn = spl(first_x2, row)
+    input_row = range(28, 34)
+
+    # new y2 data
+    row = [fill_list(sheet2, input_row[i], 7) for i in range(len(input_row))]
+    fn = [spl(first_x2, row[i]) for i in range(len(input_row))]
     nx = [num + sf for num in x]
-    oy = fn(nx)
+    oy = [fn[i](nx) for i in range(len(fn))]
     
-    row1 = fill_list(sheet1, input_row, 7)
-    fn1 = spl(first_x, row1)
-    oy1 = fn1(x) 
+    # original mean-centered y1 data
+    row1 = [fill_list(sheet1, input_row[i], 7) for i in range(len(input_row))]
+    fn1 = [spl(first_x, row1[i]) for i in range(len(input_row))]
+    oy1 = [fn1[i](nx) for i in range(len(fn1))]
     
+    # old y2 data
     x2 = [first_x2[i] for i in range(40,100)]
-    oy2 = fn(x2)
+    oy2 = [fn[i](x2) for i in range(len(fn))]
     
     # calculating the mean-centered plots
-    
-    mean0 = np.mean(oy)
-    mean1 = np.mean(oy1)
-    mean2 = np.mean(oy2)
-    y = [num-mean0 for num in oy]
-    y1 = [num-mean1 for num in oy1]
-    y2 = [num-mean2 for num in oy2]
+    mean0 = [np.mean(oy[i]) for i in range(len(oy))]
+    mean1 = [np.mean(oy1[i]) for i in range(len(oy1))]
+    mean2 = [np.mean(oy2[i]) for i in range(len(oy2))]
+
+    for i in range(len(mean0)):
+        y = y + [oy[i][j]-mean0[i] for j in range(len(oy[i]))]
+        y1 = y1 + [oy1[i][j]-mean1[i] for j in range(len(oy1[i]))]
+        y2 = y2 + [oy[i][j]-mean2[i] for j in range(len(oy2[i]))]
     
     ny = []
-    for i in range(1, len(x)-1):
-        ny.append(-y[i-1]*bw + (1+2*bw)*y[i] - y[i+1]*bw)
+
+    for j in range(len(y)):
+        for i in range(1, len(x)-1):
+            ny.append(-y[j][i-1]*bw + (1+2*bw)*y[j][i] - y[j][i+1]*bw)
     
     plt.figure().text(0.5, .05, "The difference of squares error is: " + str(err), ha='center', va='bottom')
-    plt.plot(x3, ny, 'g-', label="new")
-    plt.plot(x, y1, 'b-', label="master")
-    plt.plot(x2, y2, 'r--', label="old")
-    plt.legend(loc="best")
-    plt.show()
+    for i in range(0,1):
+        plt.plot(x3, ny[i], 'g-', label="new")
+        plt.plot(x, y1[i], 'b-', label="master")
+        plt.plot(x2, y2[i], 'r--', label="old")
+        plt.legend(loc="best")
+        plt.show()
     
     return ny
 
