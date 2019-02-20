@@ -7,7 +7,7 @@ from copy import deepcopy
 x1 = range(0, 50, 1)
 y1 = [i**1.5 for i in x1]
 y2 = [i*5 for i in x1]
-k_y1 = 0.283
+k_y1 = 0.429
 k_y2 = 0.00134
 y3 = [k_y1*i+k_y2*j for (i, j) in zip(y1,y2)]
 
@@ -18,23 +18,22 @@ plt.plot(x1, y3, 'b', label="linear combination: {}*first + {}*second".format(k_
 plt.legend(loc="best")
 plt.show()
 
-y = [y1,y2,y3] # a list of the y-data
-indices = [10,40] # indices should be the areas where the relationship is linear. number of indices should be equal to the number of curves
+# ------------ end of data -----------------------------------------------
+
+y = [y1,y2,y3] # a list of the y-data      
+index_input = input("Please enter {} indices : ".format(len(y)-1)).split(',') # indices should be the areas where the relationship is linear. number of indices should be equal to the number of curves
+indices = [int(num) for num in index_input]
 
 matrix = np.ones([len(indices), len(y)])
 for i in range(len(indices)):
     for j in range(len(y)):
         matrix[i,j] = y[j][indices[i]]
-        
-print(matrix)
-
-# ------------ end of data -----------------------------------------------
 
 # ------------ FUNCTIONS -------------------------------------------------
 
 # method for quickly solving a system of linear equations. Row echelon reduction.
 
-def ref_reduction(matrix): 
+def ref_reduction(matrix, reduce = True): 
     """Takes an N x M matrix and converts it into row-echelon form.
     
     Takes a matrix of any size (with reason), and returns its corresponding row-echelon form.
@@ -76,15 +75,31 @@ def ref_reduction(matrix):
         # divide all values by the first entry in that row
         matrix[c,:] = [matrix[c,i]/first_entry for i in range(col)]
 
-        # subtract the product of the leading element and the preceding row. this should make the first non-zero element of that row a zero.
+        # subtract the product of the leading element and the proceeding row. this should make the first non-zero element of that row a zero.
         for r in range(c+1, row):
 
             matrix[r, :] = matrix[r,:]-matrix[r,c]*matrix[c,:]
-
+    
+    # reduced row echelon form. If you want to return coefficients right away
+    if reduce == True:
+        for r in range(row-1,0,-1):
+            # start with the bottom, right corner of the matrix (which should be 1) and move upward
+            last_entry = matrix[r, r]
+            for c in range(col-2, 0, -1):
+                
+                # subtract the product of the first non-zero element and the preceding row. All values will be zero except the ones on the diagonal
+                matrix[r-abs(c-col+1), :] = matrix[r-abs(c-col+1), :]-matrix[r,:]*matrix[r-abs(c-col+1),r]
+        format_coefficients = "--"*20+"\n"        
+        for i in range(row):
+            format_coefficients += "coefficient "+str(i+1)+" = {:.5} \n".format(matrix[i, col-1])
+        return format_coefficients
+    
     return matrix
 
-REF_matrix = ref_reduction(matrix)
+# REF_matrix = ref_reduction(matrix)
+REF = ref_reduction(matrix, True)
 
+print(REF)
 def syslin_solve(matrix):
     """ Function which solves matrices in row-echelon form.
     
@@ -104,5 +119,5 @@ def syslin_solve(matrix):
                 
     return list(reversed(coefficients))
 
-coefficients = syslin_solve(REF_matrix)
-print(coefficients)
+# can call syslin_solve if optional parameter reduce = False. Otherwise, there would be two methods of solving
+# coefficients = syslin_solve(REF_matrix)
