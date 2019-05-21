@@ -1,6 +1,6 @@
 #Importing modules
 
-import tkinter as tk
+from tkinter import *
 from tkinter import filedialog
 from openpyxl import load_workbook
 from matplotlib import pyplot as plt
@@ -9,16 +9,18 @@ import numpy as np
 from numpy import square as sq
 from peakutils import indexes as peak
 
-root = tk.Tk()
+# Tkinter allows you to open a file
+root = Tk()
 file_path = filedialog.askopenfilenames(filetype = [("Excel File","*.xlsx")])
 
-first = load_workbook(str(file_path[0]))
-second = load_workbook(str(file_path[1]))
+first = load_workbook(str(file_path[0]))     # The Master instrument is assumed to be the first file
+second = load_workbook(str(file_path[1]))    # The second instrument
 
+# Selects the absorbance sheet. Make sure the name hasn't changed.
 sheet1 = first['ABS']
 sheet2 = second['ABS']
 
-# Fills up a list with an entire row
+# Function that allows you to scrape a row. The user must specify which column to start at.
 def fill_list(sheet, r, start = 1, length=sheet1.max_column):
     vals = []
     for i in range(start, length+1): 
@@ -26,20 +28,25 @@ def fill_list(sheet, r, start = 1, length=sheet1.max_column):
     return vals
 
 # picking the interval of rows of calibration samples
-rcal_i = [i for i in range(28,34)] # for shift
+rcal_i = [i for i in range(77,83)] # for shift; first value included, second value excluded
 
+# scrapes the x-values for the master and slave instruments
 first_x = fill_list(sheet1, 1, 7) 
 first_x2 = fill_list(sheet2, 1, 7) 
 
-first_row = [] # stores the sets of y-values for the calibration samples of the main instrument
-first_row2 = [] # stores the sets of y-values for the calibration samples of the secondary instrument
+# An empty array to be filled with the spectra of the selected samples
+first_row = [] # from the master instrument
+first_row2 = [] # from the slave instrument
 
-y1 = []
+# Empty arrays to be filled with the splines (y1, y2), and the interpolated y-values (yy1, yy2)
+y1 = [] # master instrument splines
 y2 = []
-yy1 = []
+yy1 = [] # master instrument interpolated y-values
 yy2 = []
 
-x = [first_x[i] for i in range(40, 100)] # Here, the range of y-values are chosen
+# for broader peaks a range(40, 105) covers 400 nm to 700 nm
+# for narrower peaks a range of (50, 90) covers 500 nm to 640 nm
+x = [first_x[i] for i in range(40, 105)] # Here, the range of y-values are chosen
 
 for i in rcal_i:
     first_row.append(fill_list(sheet1, i, 7))
@@ -50,21 +57,21 @@ for i in range(len(rcal_i)):
     y2.append(spl(first_x2, first_row2[i]))
     yy1.append(y1[i](x))
     yy2.append(y2[i](x))
-
+    
 # -------------------- FUNCTIONS -----------------------------------
 
-# Mean subtraction
+### Mean subtraction
 
 mean_yy1 = [np.mean(yy1[i]) for i in range(len(yy1))]
 mean_yy2 = [np.mean(yy2[i]) for i in range(len(yy2))]
-   
 sm_yy1 = []
 sm_yy2 = []
 for i in range(len(yy1)): 
     sm_yy1.append([yy1[i][j] - mean_yy1[i] for j in range(len(yy1[i]))])
     sm_yy2.append([yy2[i][j] - mean_yy2[i] for j in range(len(yy1[i]))])
 
-# shifting function
+    
+### shifting function
 
 def shift(yy1, yy2):
     l = [] # array of the sum of squares
@@ -96,9 +103,9 @@ def shift(yy1, yy2):
 nyy2, sf = shift(sm_yy1, sm_yy2)
 
 
-# Bandwidth Function
-peaks = [peak(nyy2[i]) for i in range(len(nyy2))]
+### Bandwidth Function
 
+peaks = [peak(nyy2[i]) for i in range(len(nyy2))]
 x3 = [x[i] for i in range(1,len(x)-1)]
 
 def bandwidth(peak_index, region, nyy2, yy1):
@@ -136,84 +143,24 @@ def bandwidth(peak_index, region, nyy2, yy1):
         
     return bwy2, bw, min(p)
 
-bwy2, bw, err = bandwidth(peaks, 5, nyy2, sm_yy1)
+bwy2, bw, err = bandwidth(peaks, 10, nyy2, sm_yy1)
 
-# # calculating the error involved
-# yyy1 = []
-# sumsquare = []
-# for i in range(len(bwy2)):
-#     yyy1.append(y1[i](x3))
-#     sumsquare.append(sum(abs(bwy2[i]-yyy1[i])))
-    
-def calibrate(sf, bw): 
-    input_row = range(28, 34)
-
-    # new y2 data
-    row = [fill_list(sheet2, input_row[i], 7) for i in range(len(input_row))]
-    fn = [spl(first_x2, row[i]) for i in range(len(input_row))]
-    nx = [num + sf for num in x]
-    oy = [fn[i](nx) for i in range(len(fn))]
-    
-    # original mean-centered y1 data
-    row1 = [fill_list(sheet1, input_row[i], 7) for i in range(len(input_row))]
-    fn1 = [spl(first_x, row1[i]) for i in range(len(input_row))]
-    oy1 = [fn1[i](nx) for i in range(len(fn1))]
-    
-    # old y2 data
-    x2 = [first_x2[i] for i in range(40,100)]
-    oy2 = [fn[i](x2) for i in range(len(fn))]
-    
-    # calculating the mean-centered plots
-    mean0 = [np.mean(oy[i]) for i in range(len(oy))]
-    mean1 = [np.mean(oy1[i]) for i in range(len(oy1))]
-    mean2 = [np.mean(oy2[i]) for i in range(len(oy2))]
-
-    # lists of the y's used in the plots
-    y = []
-    y1 = []
-    y2 = []
-    
-    for i in range(len(mean0)):
-        y.append([oy[i][j]-mean0[i] for j in range(len(oy[i]))])
-        y1.append([oy1[i][j]-mean1[i] for j in range(len(oy1[i]))])
-        y2.append([oy[i][j]-mean2[i] for j in range(len(oy2[i]))])
-    
-    # applying bandwidth only to the new y2 data
-    ny = []
-
-    for j in range(len(y)):
-        ny.append([-y[j][i-1]*bw + (1+2*bw)*y[j][i] - y[j][i+1]*bw for i in range(1, len(x)-1)])
-    
-    # plotting data
-    plt.figure().text(0.5, .05, "The difference of squares error is: " + str(err), ha='center', va='bottom')
-    for i in range(0,3):
-        plt.plot(x3, ny[i], 'g-', label="new")
-        plt.plot(x, y1[i], 'b-', label="master")
-        plt.plot(x2, y2[i], 'r--', label="old")
-        plt.legend(loc="best")
-        plt.show()
-        
-    return ny
-
-calibrate(sf, bw)
-
-sf, bw, err
     
 # ------------------------- PLOTS --------------------------------------
 
-# %matplotlib qt
+%matplotlib qt
 
-# fig = plt.figure()
-# fig.text(0.5, .05, "The difference of squares error is: " + str(sum(sumsquare)), ha='center', va='bottom')
-# # plt.plot(x, yy1[1], x, nyy2[1], 'g-', x, yy2[1], 'k-')
-# # plt.plot(x, yy1[2], x, nyy2[2], 'r-', x, yy2[2], 'k-')
-# # plt.plot(x, yy1[0], x, nyy2[0], 'y-', x, yy2[0], 'k-')
-# plt.ylim(-0.75,1.25)
-# plt.plot(x3, bwy2[0], 'g-', x, sm_yy1[0], 'b-', x, sm_yy2[0], 'r-')
+fig = plt.figure()
+
+# You can plot up to 6 curves at a time (you can choose to eliminate certain curves by commenting out the corresponding line).
+plt.plot(x3, bwy2[0], 'g-', x, sm_yy1[0], 'b-', x, sm_yy2[0], 'r-')
 # plt.plot(x3, bwy2[1], 'g-', x, sm_yy1[1], 'b-', x, sm_yy2[1], 'r-')
-# plt.plot(x3, bwy2[2], 'g-', x, sm_yy1[2], 'b-', x, sm_yy2[2], 'r-')
+plt.plot(x3, bwy2[2], 'g-', x, sm_yy1[2], 'b-', x, sm_yy2[2], 'r-')
 # plt.plot(x3, bwy2[3], 'g-', x, sm_yy1[3], 'b-', x, sm_yy2[3], 'r-')
-# plt.plot(x3, bwy2[4], 'g-', x, sm_yy1[4], 'b-', x, sm_yy2[4], 'r-')
+plt.plot(x3, bwy2[4], 'g-', x, sm_yy1[4], 'b-', x, sm_yy2[4], 'r-')
 # plt.plot(x3, bwy2[5], 'g-', x, sm_yy1[5], 'b-', x, sm_yy2[5], 'r-')
-# plt.title('Without derivative function')
-# plt.show()
+
+plt.title('Transformed Slave Spectrum')
+plt.show()
+
+print('Shift: {} \nBandwidth {}'.format(round(sf, 3), round(bw, 3)))
