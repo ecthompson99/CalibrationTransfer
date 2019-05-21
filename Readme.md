@@ -1,3 +1,10 @@
+# Repository
+* Multiple_Sample_Cal.py - The main program (known as the Calibration Transfer Algorithm) that is used to manipulate spectral data. Further information explained below.
+* Derivative_function.py - Nearly identical to the above program, but includes extra functionality for differentiation and smoothing
+* TheModel.py - Contains some functions I wrote to solve a system of linear equations. It is meant to predict hemoglobin concentration from the spectrum of a blood sample. 
+* Spegg 30.xlsx - Reference/master instrument spectral data (sample data)
+* Spegg 35.xlsx - Secondary instrument spectral data (sample data)
+
 # Overview 
 
 The Calibration Transfer Algorithm (CTA) optimizes the parameters used for fitting the response profile of a “secondary” spectrometer to the profile of the “master” instrument. The CTA uses functions of interpolation, differentiation and integration, horizontal shifting, and bandwidth. The parameter optimization uses the least sum of differences model.
